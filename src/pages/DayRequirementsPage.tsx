@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -287,23 +288,26 @@ const DayRequirementsPage: React.FC = () => {
               </Popover>
             </div>
 
-            {/* Recipe Type Display (Read-only, auto-populated) */}
+            {/* Recipe Type Selection */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Recipe Type</label>
-              <div className="h-10 px-3 py-2 rounded-md border bg-muted flex items-center">
-                {isLoadingData ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : selectedRecipe ? (
-                  <span className="font-medium">{selectedRecipe.recipe_type}</span>
-                ) : (
-                  <span className="text-muted-foreground">Select date first</span>
-                )}
-              </div>
+              <Select value={selectedRecipeCode} onValueChange={setSelectedRecipeCode} disabled={!selectedDate || isLoadingData}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={isLoadingData ? "Loading..." : "Select recipe type"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {recipeTypesData.map((recipe) => (
+                    <SelectItem key={recipe.recipe_code} value={recipe.recipe_code}>
+                      {recipe.recipe_type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Total Daily Requirement Display */}
+            {/* Total Daily Req Display */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Total Daily Requirement</label>
+              <label className="text-sm font-medium">Total Daily Req</label>
               <div className="h-10 px-3 py-2 rounded-md border bg-muted flex items-center">
                 {isLoadingData ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
