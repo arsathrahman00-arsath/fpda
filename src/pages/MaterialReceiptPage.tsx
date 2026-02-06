@@ -22,13 +22,18 @@ interface CategoryOption {
   cat_name: string;
 }
 
-interface ReceiptEntry {
+interface ReceiptRow {
   id: number;
-  supplierName: string;
   categoryName: string;
   itemName: string;
   uom: string;
   receivedQty: string;
+}
+
+interface SupplierGroup {
+  id: number;
+  supplierName: string;
+  rows: ReceiptRow[];
 }
 
 const MaterialReceiptPage: React.FC = () => {
@@ -47,9 +52,13 @@ const MaterialReceiptPage: React.FC = () => {
   const [isLoadingUnits, setIsLoadingUnits] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Multi-entry support
-  const [entries, setEntries] = useState<ReceiptEntry[]>([
-    { id: 1, supplierName: "", categoryName: "", itemName: "", uom: "", receivedQty: "" }
+  // Grouped entries by supplier
+  const [supplierGroups, setSupplierGroups] = useState<SupplierGroup[]>([
+    { 
+      id: 1, 
+      supplierName: "", 
+      rows: [{ id: 1, categoryName: "", itemName: "", uom: "", receivedQty: "" }] 
+    }
   ]);
 
   // Fetch all dropdown data on mount
@@ -111,27 +120,67 @@ const MaterialReceiptPage: React.FC = () => {
     fetchDropdownData();
   }, []);
 
-  const updateEntry = (id: number, field: keyof ReceiptEntry, value: string) => {
-    setEntries(prev => prev.map(entry => 
-      entry.id === id ? { ...entry, [field]: value } : entry
+  // Update supplier name for a group
+  const updateSupplierName = (groupId: number, supplierName: string) => {
+    setSupplierGroups(prev => prev.map(group => 
+      group.id === groupId ? { ...group, supplierName } : group
     ));
   };
 
-  const addEntry = () => {
-    const newId = Math.max(...entries.map(e => e.id)) + 1;
-    setEntries(prev => [...prev, { 
-      id: newId, 
-      supplierName: "", 
-      categoryName: "", 
-      itemName: "", 
-      uom: "", 
-      receivedQty: "" 
-    }]);
+  // Update a row within a supplier group
+  const updateRow = (groupId: number, rowId: number, field: keyof ReceiptRow, value: string) => {
+    setSupplierGroups(prev => prev.map(group => {
+      if (group.id !== groupId) return group;
+      return {
+        ...group,
+        rows: group.rows.map(row => 
+          row.id === rowId ? { ...row, [field]: value } : row
+        )
+      };
+    }));
   };
 
-  const removeEntry = (id: number) => {
-    if (entries.length > 1) {
-      setEntries(prev => prev.filter(entry => entry.id !== id));
+  // Add a new row to a supplier group
+  const addRow = (groupId: number) => {
+    setSupplierGroups(prev => prev.map(group => {
+      if (group.id !== groupId) return group;
+      const newRowId = Math.max(...group.rows.map(r => r.id), 0) + 1;
+      return {
+        ...group,
+        rows: [...group.rows, { id: newRowId, categoryName: "", itemName: "", uom: "", receivedQty: "" }]
+      };
+    }));
+  };
+
+  // Remove a row from a supplier group
+  const removeRow = (groupId: number, rowId: number) => {
+    setSupplierGroups(prev => prev.map(group => {
+      if (group.id !== groupId) return group;
+      if (group.rows.length <= 1) return group; // Keep at least one row
+      return {
+        ...group,
+        rows: group.rows.filter(row => row.id !== rowId)
+      };
+    }));
+  };
+
+  // Add a new supplier group
+  const addSupplierGroup = () => {
+    const newGroupId = Math.max(...supplierGroups.map(g => g.id), 0) + 1;
+    setSupplierGroups(prev => [
+      ...prev,
+      { 
+        id: newGroupId, 
+        supplierName: "", 
+        rows: [{ id: 1, categoryName: "", itemName: "", uom: "", receivedQty: "" }] 
+      }
+    ]);
+  };
+
+  // Remove a supplier group
+  const removeSupplierGroup = (groupId: number) => {
+    if (supplierGroups.length > 1) {
+      setSupplierGroups(prev => prev.filter(group => group.id !== groupId));
     }
   };
 
@@ -145,14 +194,22 @@ const MaterialReceiptPage: React.FC = () => {
       return;
     }
 
-    const validEntries = entries.filter(
-      entry => entry.supplierName && entry.categoryName && entry.itemName && entry.uom && entry.receivedQty
-    );
+    // Collect all valid entries
+    const validEntries: { supplierName: string; row: ReceiptRow }[] = [];
+    
+    supplierGroups.forEach(group => {
+      if (!group.supplierName) return;
+      group.rows.forEach(row => {
+        if (row.categoryName && row.itemName && row.uom && row.receivedQty) {
+          validEntries.push({ supplierName: group.supplierName, row });
+        }
+      });
+    });
 
     if (validEntries.length === 0) {
       toast({
         title: "Validation Error",
-        description: "Please fill in at least one complete entry",
+        description: "Please fill in at least one complete entry with supplier",
         variant: "destructive",
       });
       return;
@@ -169,10 +226,10 @@ const MaterialReceiptPage: React.FC = () => {
           materialReceiptApi.create({
             mat_rec_date: formattedDate,
             sup_name: entry.supplierName,
-            cat_name: entry.categoryName,
-            item_name: entry.itemName,
-            unit_short: entry.uom,
-            mat_rec_qty: entry.receivedQty,
+            cat_name: entry.row.categoryName,
+            item_name: entry.row.itemName,
+            unit_short: entry.row.uom,
+            mat_rec_qty: entry.row.receivedQty,
             created_by: createdBy,
           })
         )
@@ -185,7 +242,13 @@ const MaterialReceiptPage: React.FC = () => {
 
       // Reset form
       setSelectedDate(undefined);
-      setEntries([{ id: 1, supplierName: "", categoryName: "", itemName: "", uom: "", receivedQty: "" }]);
+      setSupplierGroups([
+        { 
+          id: 1, 
+          supplierName: "", 
+          rows: [{ id: 1, categoryName: "", itemName: "", uom: "", receivedQty: "" }] 
+        }
+      ]);
     } catch (error) {
       console.error("Failed to save material receipts:", error);
       toast({
@@ -212,7 +275,7 @@ const MaterialReceiptPage: React.FC = () => {
             New Material Receipt
           </CardTitle>
           <CardDescription>
-            Enter the details of received materials
+            Enter the details of received materials organized by supplier
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -244,53 +307,36 @@ const MaterialReceiptPage: React.FC = () => {
             </Popover>
           </div>
 
-          {/* Entries */}
-          <div className="space-y-4">
+          {/* Supplier Groups */}
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Material Entries</Label>
+              <Label className="text-base font-semibold">Supplier Entries</Label>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addEntry}
+                onClick={addSupplierGroup}
                 className="gap-1"
               >
                 <Plus className="w-4 h-4" />
-                Add Entry
+                Add Supplier
               </Button>
             </div>
 
-            {entries.map((entry, index) => (
+            {supplierGroups.map((group, groupIndex) => (
               <div
-                key={entry.id}
-                className="p-4 border rounded-lg space-y-4 bg-muted/30"
+                key={group.id}
+                className="border rounded-lg overflow-hidden"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Entry #{index + 1}
-                  </span>
-                  {entries.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeEntry(entry.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Supplier Name */}
-                  <div className="space-y-2">
-                    <Label>Supplier Name</Label>
+                {/* Supplier Header */}
+                <div className="bg-muted/50 p-4 flex items-center gap-4">
+                  <div className="flex-1 space-y-2">
+                    <Label className="text-sm">Supplier Name</Label>
                     <Select
-                      value={entry.supplierName}
-                      onValueChange={(value) => updateEntry(entry.id, "supplierName", value)}
+                      value={group.supplierName}
+                      onValueChange={(value) => updateSupplierName(group.id, value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-background">
                         <SelectValue placeholder={isLoadingSuppliers ? "Loading..." : "Select supplier"} />
                       </SelectTrigger>
                       <SelectContent>
@@ -302,79 +348,133 @@ const MaterialReceiptPage: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Category Name */}
-                  <div className="space-y-2">
-                    <Label>Category Name</Label>
-                    <Select
-                      value={entry.categoryName}
-                      onValueChange={(value) => updateEntry(entry.id, "categoryName", value)}
+                  {supplierGroups.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeSupplierGroup(group.id)}
+                      className="text-destructive hover:text-destructive mt-6"
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Select category"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.cat_name} value={category.cat_name}>
-                            {category.cat_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Material Rows */}
+                <div className="p-4 space-y-3">
+                  {/* Header Row */}
+                  <div className="hidden md:grid md:grid-cols-12 gap-2 text-xs font-medium text-muted-foreground px-1">
+                    <div className="col-span-3">Category Name</div>
+                    <div className="col-span-3">Item Name</div>
+                    <div className="col-span-2">Unit of Measure</div>
+                    <div className="col-span-3">Received Quantity</div>
+                    <div className="col-span-1">Action</div>
                   </div>
 
-                  {/* Item Name */}
-                  <div className="space-y-2">
-                    <Label>Item Name</Label>
-                    <Select
-                      value={entry.itemName}
-                      onValueChange={(value) => updateEntry(entry.id, "itemName", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoadingItems ? "Loading..." : "Select item"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {items.map((item) => (
-                          <SelectItem key={item.item_name} value={item.item_name}>
-                            {item.item_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {group.rows.map((row) => (
+                    <div key={row.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
+                      {/* Category Name */}
+                      <div className="md:col-span-3">
+                        <Label className="md:hidden text-xs mb-1 block">Category Name</Label>
+                        <Select
+                          value={row.categoryName}
+                          onValueChange={(value) => updateRow(group.id, row.id, "categoryName", value)}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Category"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((category) => (
+                              <SelectItem key={category.cat_name} value={category.cat_name}>
+                                {category.cat_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  {/* UoM */}
-                  <div className="space-y-2">
-                    <Label>Unit of Measure</Label>
-                    <Select
-                      value={entry.uom}
-                      onValueChange={(value) => updateEntry(entry.id, "uom", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoadingUnits ? "Loading..." : "Select UoM"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit} value={unit}>
-                            {unit}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      {/* Item Name */}
+                      <div className="md:col-span-3">
+                        <Label className="md:hidden text-xs mb-1 block">Item Name</Label>
+                        <Select
+                          value={row.itemName}
+                          onValueChange={(value) => updateRow(group.id, row.id, "itemName", value)}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={isLoadingItems ? "Loading..." : "Item"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {items.map((item) => (
+                              <SelectItem key={item.item_name} value={item.item_name}>
+                                {item.item_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  {/* Received Quantity */}
-                  <div className="space-y-2">
-                    <Label>Received Quantity</Label>
-                    <Input
-                      type="number"
-                      placeholder="Enter quantity"
-                      value={entry.receivedQty}
-                      onChange={(e) => updateEntry(entry.id, "receivedQty", e.target.value)}
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
+                      {/* UoM */}
+                      <div className="md:col-span-2">
+                        <Label className="md:hidden text-xs mb-1 block">Unit of Measure</Label>
+                        <Select
+                          value={row.uom}
+                          onValueChange={(value) => updateRow(group.id, row.id, "uom", value)}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={isLoadingUnits ? "Loading..." : "UoM"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {units.map((unit) => (
+                              <SelectItem key={unit} value={unit}>
+                                {unit}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Received Quantity */}
+                      <div className="md:col-span-3">
+                        <Label className="md:hidden text-xs mb-1 block">Received Quantity</Label>
+                        <Input
+                          type="number"
+                          placeholder="Qty"
+                          value={row.receivedQty}
+                          onChange={(e) => updateRow(group.id, row.id, "receivedQty", e.target.value)}
+                          min="0"
+                          step="0.01"
+                          className="h-9"
+                        />
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="md:col-span-1 flex gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => addRow(group.id)}
+                          className="h-9 w-9"
+                          title="Add row"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                        {group.rows.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => removeRow(group.id, row.id)}
+                            className="h-9 w-9 text-destructive hover:text-destructive"
+                            title="Remove row"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}

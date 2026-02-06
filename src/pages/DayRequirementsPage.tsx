@@ -13,10 +13,15 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { dayRequirementsApi } from "@/lib/api";
 
-interface RecipeTypeData {
+interface DateResponseData {
+  recipe_types: string[];
+  req_qty: number[];
+}
+
+interface RecipeTypeDisplay {
   recipe_type: string;
   recipe_code?: number;
-  req_qty?: number;
+  req_qty: number;
 }
 
 interface RecipeItem {
@@ -33,7 +38,7 @@ const DayRequirementsPage: React.FC = () => {
   // State
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedRecipeType, setSelectedRecipeType] = useState<string>("");
-  const [recipeTypesData, setRecipeTypesData] = useState<RecipeTypeData[]>([]);
+  const [recipeTypesData, setRecipeTypesData] = useState<RecipeTypeDisplay[]>([]);
   const [recipeItems, setRecipeItems] = useState<RecipeItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [totalDailyRequirement, setTotalDailyRequirement] = useState<number>(0);
@@ -61,13 +66,21 @@ const DayRequirementsPage: React.FC = () => {
         const response = await dayRequirementsApi.getByDate(formattedDate);
         
         if (response.status === "success" && response.data) {
-          setRecipeTypesData(response.data);
+          const data = response.data as DateResponseData;
+          
+          // Transform arrays into display format
+          const recipeTypes = data.recipe_types || [];
+          const reqQtyArray = data.req_qty || [];
+          
+          const transformedData: RecipeTypeDisplay[] = recipeTypes.map((type, index) => ({
+            recipe_type: type,
+            req_qty: Number(reqQtyArray[index]) || 0,
+          }));
+          
+          setRecipeTypesData(transformedData);
           
           // Calculate total daily requirement as sum of all req_qty
-          const total = response.data.reduce(
-            (sum: number, item: RecipeTypeData) => sum + (Number(item.req_qty) || 0),
-            0
-          );
+          const total = reqQtyArray.reduce((sum: number, qty: number) => sum + (Number(qty) || 0), 0);
           setTotalDailyRequirement(total);
           
           // Calculate kg value (sum / 6)
