@@ -81,9 +81,12 @@ const PackingPage: React.FC = () => {
           const recipes = data.recipes || [];
           const reqQtyArray = data.req_qty || [];
 
-          const list: RecipeQtyData[] = recipes.map((r: any, i: number) => ({
+          // Sum all req_qty values
+          const totalReqQty = reqQtyArray.reduce((sum: number, val: number) => sum + (Number(val) || 0), 0);
+
+          const list: RecipeQtyData[] = recipes.map((r: any) => ({
             recipe_type: (r.recipe_type || "").trim(),
-            req_qty: Number(reqQtyArray[i]) || 0,
+            req_qty: totalReqQty,
           }));
 
           setRecipeQtyList(list);
