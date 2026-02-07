@@ -243,7 +243,7 @@ export const dayRequirementsApi = {
 // Packing API endpoints
 export const packingApi = {
   getAll: () => getData("/packin_get"),
-  getByDate: (date: string) => getData(`/get_recipe_and_qty_by_date?date=${date}`),
+  getByDate: (date: string) => postFormData("/get_recipe_and_qty_by_date/", { date }),
   create: (data: {
     pack_date: string;
     recipe_type: string;
