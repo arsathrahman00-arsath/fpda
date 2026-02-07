@@ -29,9 +29,15 @@ interface MasjidRequirement {
   req_qty: number;
 }
 
+interface RecipeOption {
+  recipe_type: string;
+  recipe_code: string;
+}
+
 interface AllocationRow {
   id: string;
   recipe_type: string;
+  recipe_code: string;
   masjid_name: string;
   req_qty: number;
   alloc_qty: string;
@@ -49,7 +55,7 @@ const FoodAllocationPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [isLoadingDateData, setIsLoadingDateData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [recipes, setRecipes] = useState<string[]>([]);
+  const [recipes, setRecipes] = useState<RecipeOption[]>([]);
   const [masjidRequirements, setMasjidRequirements] = useState<MasjidRequirement[]>([]);
   const [availableQty, setAvailableQty] = useState<number>(0);
   const [rows, setRows] = useState<AllocationRow[]>([]);
@@ -70,13 +76,17 @@ const FoodAllocationPage: React.FC = () => {
 
   useEffect(() => { fetchRecords(); }, []);
 
-  const createEmptyRow = useCallback((recipeList?: string[]): AllocationRow => ({
-    id: crypto.randomUUID(),
-    recipe_type: (recipeList || recipes).length === 1 ? (recipeList || recipes)[0] : "",
-    masjid_name: "",
-    req_qty: 0,
-    alloc_qty: "",
-  }), [recipes]);
+  const createEmptyRow = useCallback((recipeList?: RecipeOption[]): AllocationRow => {
+    const list = recipeList || recipes;
+    return {
+      id: crypto.randomUUID(),
+      recipe_type: list.length === 1 ? list[0].recipe_type : "",
+      recipe_code: list.length === 1 ? list[0].recipe_code : "",
+      masjid_name: "",
+      req_qty: 0,
+      alloc_qty: "",
+    };
+  }, [recipes]);
 
   const resetDialog = () => {
     setSelectedDate(undefined);
@@ -105,12 +115,15 @@ const FoodAllocationPage: React.FC = () => {
           allocationApi.getAvailableQty(formattedDate),
         ]);
 
-        let recipeList: string[] = [];
+        let recipeList: RecipeOption[] = [];
         let masjidList: MasjidRequirement[] = [];
 
         if (scheduleRes.status === "success" && scheduleRes.data) {
           const data = scheduleRes.data;
-          recipeList = data.recipes || [];
+          recipeList = (data.recipes || []).map((r: any) => ({
+            recipe_type: (r.recipe_type || "").trim(),
+            recipe_code: r.recipe_code || "",
+          }));
           const requirements = data.requirements || [];
           masjidList = requirements.map((r: any) => ({
             masjid_name: r.masjid_name,
@@ -128,7 +141,8 @@ const FoodAllocationPage: React.FC = () => {
 
         setRows([{
           id: crypto.randomUUID(),
-          recipe_type: recipeList.length === 1 ? recipeList[0] : "",
+          recipe_type: recipeList.length === 1 ? recipeList[0].recipe_type : "",
+          recipe_code: recipeList.length === 1 ? recipeList[0].recipe_code : "",
           masjid_name: "",
           req_qty: 0,
           alloc_qty: "",
@@ -160,6 +174,10 @@ const FoodAllocationPage: React.FC = () => {
     setRows(prev => prev.map(row => {
       if (row.id !== id) return row;
       const updated = { ...row, [field]: value };
+      if (field === "recipe_type") {
+        const found = recipes.find(r => r.recipe_type === value);
+        updated.recipe_code = found ? found.recipe_code : "";
+      }
       if (field === "masjid_name") {
         const found = masjidRequirements.find(m => m.masjid_name === value);
         updated.req_qty = found ? found.req_qty : 0;
@@ -190,7 +208,7 @@ const FoodAllocationPage: React.FC = () => {
           alloc_qty: row.alloc_qty,
           created_by: user?.user_name || "",
           recipe_type: row.recipe_type,
-          recipe_code: row.recipe_type,
+          recipe_code: row.recipe_code,
         });
       }
 
@@ -288,13 +306,13 @@ const FoodAllocationPage: React.FC = () => {
                                 <TableRow key={row.id}>
                                   <TableCell>
                                     {recipes.length === 1 ? (
-                                      <span className="text-sm font-medium">{recipes[0]}</span>
+                                      <span className="text-sm font-medium">{recipes[0].recipe_type}</span>
                                     ) : (
                                       <Select value={row.recipe_type} onValueChange={(v) => updateRow(row.id, "recipe_type", v)}>
                                         <SelectTrigger className="h-9"><SelectValue placeholder="Select recipe" /></SelectTrigger>
                                         <SelectContent className="z-[200] bg-popover">
                                           {recipes.map((r, i) => (
-                                            <SelectItem key={i} value={r}>{r}</SelectItem>
+                                            <SelectItem key={i} value={r.recipe_type}>{r.recipe_type}</SelectItem>
                                           ))}
                                         </SelectContent>
                                       </Select>
