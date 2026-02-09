@@ -283,6 +283,27 @@ export const deliveryApi = {
   }) => postFormData("/delivery_post/", data),
 };
 
+// Cleaning API endpoints
+export type CleaningType = "material" | "vessel" | "prep" | "pack";
+
+const cleaningEndpoints: Record<CleaningType, string> = {
+  material: "/material_clean",
+  vessel: "/vessel_clean",
+  prep: "/prep_clean",
+  pack: "/pack_clean",
+};
+
+export const cleaningApi = {
+  submit: async (type: CleaningType, formData: FormData): Promise<ApiResponse> => {
+    const response = await fetch(`${API_BASE_URL}${cleaningEndpoints[type]}`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+};
+
 // Material Receipt API endpoints
 export const materialReceiptApi = {
   // Get supplier names for dropdown
