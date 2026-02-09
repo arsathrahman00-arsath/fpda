@@ -20,9 +20,13 @@ import RequirementPage from "@/pages/RequirementPage";
 import DayRequirementsPage from "@/pages/DayRequirementsPage";
 import MaterialReceiptPage from "@/pages/MaterialReceiptPage";
 import PackingPage from "@/pages/PackingPage";
+import CookingPage from "@/pages/CookingPage";
 import FoodAllocationPage from "@/pages/FoodAllocationPage";
 import DeliveryPage from "@/pages/DeliveryPage";
-import CleaningPage from "@/pages/CleaningPage";
+import MaterialCleaningPage from "@/pages/cleaning/MaterialCleaningPage";
+import VesselCleaningPage from "@/pages/cleaning/VesselCleaningPage";
+import PrepCleaningPage from "@/pages/cleaning/PrepCleaningPage";
+import PackCleaningPage from "@/pages/cleaning/PackCleaningPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,9 +58,13 @@ const App = () => (
                 <Route path="/dashboard/day-requirements" element={<DayRequirementsPage />} />
                 <Route path="/dashboard/material-receipt" element={<MaterialReceiptPage />} />
                 <Route path="/dashboard/packing" element={<PackingPage />} />
+                <Route path="/dashboard/cooking" element={<CookingPage />} />
                 <Route path="/dashboard/food-allocation" element={<FoodAllocationPage />} />
                 <Route path="/dashboard/delivery" element={<DeliveryPage />} />
-                <Route path="/dashboard/cleaning" element={<CleaningPage />} />
+                <Route path="/dashboard/cleaning/material" element={<MaterialCleaningPage />} />
+                <Route path="/dashboard/cleaning/vessel" element={<VesselCleaningPage />} />
+                <Route path="/dashboard/cleaning/prep" element={<PrepCleaningPage />} />
+                <Route path="/dashboard/cleaning/pack" element={<PackCleaningPage />} />
               </Route>
             </Route>
 
