@@ -304,6 +304,18 @@ export const cleaningApi = {
   },
 };
 
+// Cooking API endpoints
+export const cookingApi = {
+  submit: async (formData: FormData): Promise<ApiResponse> => {
+    const response = await fetch(`${API_BASE_URL}/cooking/`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+};
+
 // Material Receipt API endpoints
 export const materialReceiptApi = {
   // Get supplier names for dropdown

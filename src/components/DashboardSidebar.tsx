@@ -23,6 +23,11 @@ import {
   Utensils,
   Send,
   SprayCan,
+  Flame,
+  Droplets,
+  Container,
+  Sandwich,
+  Archive,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -79,26 +84,76 @@ const distributionMenuItems = [
   { to: "/dashboard/delivery", icon: <Send className="w-4 h-4" />, label: "Delivery" },
 ];
 
+const cleaningMenuItems = [
+  { to: "/dashboard/cleaning/material", icon: <Droplets className="w-4 h-4" />, label: "Materials" },
+  { to: "/dashboard/cleaning/vessel", icon: <Container className="w-4 h-4" />, label: "Vessel" },
+  { to: "/dashboard/cleaning/prep", icon: <Sandwich className="w-4 h-4" />, label: "Preparation Area" },
+  { to: "/dashboard/cleaning/pack", icon: <Archive className="w-4 h-4" />, label: "Packing Area" },
+];
+
+interface CollapsibleMenuProps {
+  label: string;
+  icon: React.ReactNode;
+  items: { to: string; icon: React.ReactNode; label: string }[];
+  isActive: boolean;
+  defaultOpen: boolean;
+}
+
+const CollapsibleMenu: React.FC<CollapsibleMenuProps> = ({ label, icon, items, isActive, defaultOpen }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger asChild>
+        <button
+          className={cn(
+            "sidebar-item w-full justify-between",
+            isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+          )}
+        >
+          <div className="flex items-center gap-3">
+            {icon}
+            <span className="font-medium">{label}</span>
+          </div>
+          <ChevronDown
+            className={cn(
+              "w-4 h-4 transition-transform duration-200",
+              isOpen && "rotate-180"
+            )}
+          />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pl-4 mt-1 space-y-1">
+        {items.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              cn(
+                "sidebar-item text-sm py-2",
+                isActive && "sidebar-item-active"
+              )
+            }
+          >
+            {item.icon}
+            <span className="font-medium">{item.label}</span>
+          </NavLink>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
 const DashboardSidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Check if any master submenu is active
+
   const isMasterActive = masterMenuItems.some(item => location.pathname === item.to);
-  const [isMasterOpen, setIsMasterOpen] = useState(isMasterActive);
-  
-  // Check if any delivery plan submenu is active
   const isDeliveryPlanActive = deliveryPlanMenuItems.some(item => location.pathname === item.to);
-  const [isDeliveryPlanOpen, setIsDeliveryPlanOpen] = useState(isDeliveryPlanActive);
-  
-  // Check if any preparation submenu is active
   const isPreparationActive = preparationMenuItems.some(item => location.pathname === item.to);
-  const [isPreparationOpen, setIsPreparationOpen] = useState(isPreparationActive);
-  
-  // Check if any distribution submenu is active
   const isDistributionActive = distributionMenuItems.some(item => location.pathname === item.to);
-  const [isDistributionOpen, setIsDistributionOpen] = useState(isDistributionActive);
+  const isCleaningActive = cleaningMenuItems.some(item => location.pathname === item.to);
 
   const handleLogout = () => {
     logout();
@@ -122,186 +177,17 @@ const DashboardSidebar: React.FC = () => {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {/* Dashboard Link */}
-        <NavItem 
-          to="/dashboard" 
-          icon={<LayoutDashboard className="w-5 h-5" />} 
-          label="Dashboard" 
-        />
-        
-        {/* Master Menu with Submenu */}
-        <Collapsible open={isMasterOpen} onOpenChange={setIsMasterOpen}>
-          <CollapsibleTrigger asChild>
-            <button
-              className={cn(
-                "sidebar-item w-full justify-between",
-                isMasterActive && "bg-sidebar-accent text-sidebar-accent-foreground"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Database className="w-5 h-5" />
-                <span className="font-medium">Master</span>
-              </div>
-              <ChevronDown 
-                className={cn(
-                  "w-4 h-4 transition-transform duration-200",
-                  isMasterOpen && "rotate-180"
-                )} 
-              />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pl-4 mt-1 space-y-1">
-            {masterMenuItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "sidebar-item text-sm py-2",
-                    isActive && "sidebar-item-active"
-                  )
-                }
-              >
-                {item.icon}
-                <span className="font-medium">{item.label}</span>
-              </NavLink>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
-        
-        {/* Delivery Plan Menu with Submenu */}
-        <Collapsible open={isDeliveryPlanOpen} onOpenChange={setIsDeliveryPlanOpen}>
-          <CollapsibleTrigger asChild>
-            <button
-              className={cn(
-                "sidebar-item w-full justify-between",
-                isDeliveryPlanActive && "bg-sidebar-accent text-sidebar-accent-foreground"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5" />
-                <span className="font-medium">Delivery Plan</span>
-              </div>
-              <ChevronDown 
-                className={cn(
-                  "w-4 h-4 transition-transform duration-200",
-                  isDeliveryPlanOpen && "rotate-180"
-                )} 
-              />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pl-4 mt-1 space-y-1">
-            {deliveryPlanMenuItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "sidebar-item text-sm py-2",
-                    isActive && "sidebar-item-active"
-                  )
-                }
-              >
-                {item.icon}
-                <span className="font-medium">{item.label}</span>
-              </NavLink>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
-        
-        {/* Preparation Menu with Submenu */}
-        <Collapsible open={isPreparationOpen} onOpenChange={setIsPreparationOpen}>
-          <CollapsibleTrigger asChild>
-            <button
-              className={cn(
-                "sidebar-item w-full justify-between",
-                isPreparationActive && "bg-sidebar-accent text-sidebar-accent-foreground"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <PrepIcon className="w-5 h-5" />
-                <span className="font-medium">Preparation</span>
-              </div>
-              <ChevronDown 
-                className={cn(
-                  "w-4 h-4 transition-transform duration-200",
-                  isPreparationOpen && "rotate-180"
-                )} 
-              />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pl-4 mt-1 space-y-1">
-            {preparationMenuItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "sidebar-item text-sm py-2",
-                    isActive && "sidebar-item-active"
-                  )
-                }
-              >
-                {item.icon}
-                <span className="font-medium">{item.label}</span>
-              </NavLink>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
-        
-        {/* Packing - Separate Menu */}
-        <NavItem 
-          to="/dashboard/packing" 
-          icon={<PackageCheck className="w-5 h-5" />} 
-          label="Packing" 
-        />
-        
-        {/* Cleaning - Separate Menu */}
-        <NavItem 
-          to="/dashboard/cleaning" 
-          icon={<SprayCan className="w-5 h-5" />} 
-          label="Cleaning" 
-        />
-        
-        {/* Distribution Menu with Submenu */}
-        <Collapsible open={isDistributionOpen} onOpenChange={setIsDistributionOpen}>
-          <CollapsibleTrigger asChild>
-            <button
-              className={cn(
-                "sidebar-item w-full justify-between",
-                isDistributionActive && "bg-sidebar-accent text-sidebar-accent-foreground"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Utensils className="w-5 h-5" />
-                <span className="font-medium">Distribution</span>
-              </div>
-              <ChevronDown 
-                className={cn(
-                  "w-4 h-4 transition-transform duration-200",
-                  isDistributionOpen && "rotate-180"
-                )} 
-              />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pl-4 mt-1 space-y-1">
-            {distributionMenuItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "sidebar-item text-sm py-2",
-                    isActive && "sidebar-item-active"
-                  )
-                }
-              >
-                {item.icon}
-                <span className="font-medium">{item.label}</span>
-              </NavLink>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
+        <NavItem to="/dashboard" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
+
+        <CollapsibleMenu label="Master" icon={<Database className="w-5 h-5" />} items={masterMenuItems} isActive={isMasterActive} defaultOpen={isMasterActive} />
+        <CollapsibleMenu label="Delivery Plan" icon={<Calendar className="w-5 h-5" />} items={deliveryPlanMenuItems} isActive={isDeliveryPlanActive} defaultOpen={isDeliveryPlanActive} />
+        <CollapsibleMenu label="Preparation" icon={<PrepIcon className="w-5 h-5" />} items={preparationMenuItems} isActive={isPreparationActive} defaultOpen={isPreparationActive} />
+
+        <NavItem to="/dashboard/packing" icon={<PackageCheck className="w-5 h-5" />} label="Packing" />
+        <NavItem to="/dashboard/cooking" icon={<Flame className="w-5 h-5" />} label="Cooking" />
+
+        <CollapsibleMenu label="Cleaning" icon={<SprayCan className="w-5 h-5" />} items={cleaningMenuItems} isActive={isCleaningActive} defaultOpen={isCleaningActive} />
+        <CollapsibleMenu label="Distribution" icon={<Utensils className="w-5 h-5" />} items={distributionMenuItems} isActive={isDistributionActive} defaultOpen={isDistributionActive} />
       </nav>
 
       {/* User Section */}

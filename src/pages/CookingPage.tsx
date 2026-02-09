@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { CalendarIcon, Camera, Video, Upload, Loader2, CheckCircle2 } from "lucide-react";
@@ -12,61 +12,74 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { cleaningApi, CleaningType } from "@/lib/api";
+import { cookingApi, recipeTypeListApi } from "@/lib/api";
 
-const CLEANING_TYPES: { key: CleaningType; label: string; description: string }[] = [
-  { key: "material", label: "Materials Cleaning", description: "Log cleaning of raw materials and ingredients" },
-  { key: "vessel", label: "Vessel Cleaning", description: "Log cleaning of cooking vessels and utensils" },
-  { key: "prep", label: "Preparation Area Cleaning", description: "Log cleaning of food preparation areas" },
-  { key: "pack", label: "Packing Area Cleaning", description: "Log cleaning of packing and packaging areas" },
-];
+interface RecipeTypeOption {
+  recipe_type: string;
+  recipe_code: number;
+}
 
-const CleaningPage: React.FC = () => {
+const CookingPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeType, setActiveType] = useState<CleaningType>("material");
-  const [cleanDate, setCleanDate] = useState<Date>();
+  const [cookDate, setCookDate] = useState<Date>();
+  const [recipeType, setRecipeType] = useState("");
+  const [recipeTypes, setRecipeTypes] = useState<RecipeTypeOption[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [video, setVideo] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingTypes, setIsLoadingTypes] = useState(true);
   const photoRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
 
-  const activeConfig = CLEANING_TYPES.find(t => t.key === activeType)!;
+  useEffect(() => {
+    const fetchRecipeTypes = async () => {
+      try {
+        const response = await recipeTypeListApi.getAll();
+        if (response.status === "success" && response.data) {
+          setRecipeTypes(response.data);
+        }
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to load recipe types.", variant: "destructive" });
+      } finally {
+        setIsLoadingTypes(false);
+      }
+    };
+    fetchRecipeTypes();
+  }, []);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "photo" | "video",
+    setter: (f: File | null) => void
+  ) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        toast({ title: "Invalid file", description: "Please select an image file.", variant: "destructive" });
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast({ title: "File too large", description: "Image must be under 10MB.", variant: "destructive" });
-        return;
-      }
-      setPhoto(file);
+    if (!file) return;
+    const isPhoto = type === "photo";
+    const prefix = isPhoto ? "image/" : "video/";
+    const maxMB = isPhoto ? 10 : 50;
+    if (!file.type.startsWith(prefix)) {
+      toast({ title: "Invalid file", description: `Please select a ${type} file.`, variant: "destructive" });
+      return;
     }
-  };
-
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("video/")) {
-        toast({ title: "Invalid file", description: "Please select a video file.", variant: "destructive" });
-        return;
-      }
-      if (file.size > 50 * 1024 * 1024) {
-        toast({ title: "File too large", description: "Video must be under 50MB.", variant: "destructive" });
-        return;
-      }
-      setVideo(file);
+    if (file.size > maxMB * 1024 * 1024) {
+      toast({ title: "File too large", description: `${type === "photo" ? "Image" : "Video"} must be under ${maxMB}MB.`, variant: "destructive" });
+      return;
     }
+    setter(file);
   };
 
   const resetForm = () => {
-    setCleanDate(undefined);
+    setCookDate(undefined);
+    setRecipeType("");
     setPhoto(null);
     setVideo(null);
     if (photoRef.current) photoRef.current.value = "";
@@ -74,33 +87,37 @@ const CleaningPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!cleanDate) {
-      toast({ title: "Missing date", description: "Please select a cleaning date.", variant: "destructive" });
+    if (!cookDate) {
+      toast({ title: "Missing date", description: "Please select a cooking date.", variant: "destructive" });
+      return;
+    }
+    if (!recipeType) {
+      toast({ title: "Missing recipe type", description: "Please select a recipe type.", variant: "destructive" });
       return;
     }
     if (!photo) {
-      toast({ title: "Missing photo", description: "Please upload a cleaning photo.", variant: "destructive" });
+      toast({ title: "Missing photo", description: "Please upload a cooking photo.", variant: "destructive" });
       return;
     }
     if (!video) {
-      toast({ title: "Missing video", description: "Please upload a cleaning video.", variant: "destructive" });
+      toast({ title: "Missing video", description: "Please upload a cooking video.", variant: "destructive" });
       return;
     }
 
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append("clean_date", format(cleanDate, "yyyy-MM-dd"));
+      formData.append("cook_date", format(cookDate, "yyyy-MM-dd"));
       formData.append("created_by", user?.user_name || "");
-      formData.append("clean_photo", photo);
-      formData.append("clean_video", video);
+      formData.append("recipe_type", recipeType);
+      formData.append("cook_photo", photo);
+      formData.append("cook_video", video);
 
-      await cleaningApi.submit(activeType, formData);
-
-      toast({ title: "Success", description: `${activeConfig.label} record submitted successfully.` });
+      await cookingApi.submit(formData);
+      toast({ title: "Success", description: "Cooking record submitted successfully." });
       resetForm();
     } catch (error) {
-      toast({ title: "Error", description: "Failed to submit cleaning record. Please try again.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to submit cooking record. Please try again.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -109,53 +126,33 @@ const CleaningPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Cleaning</h1>
-        <p className="text-muted-foreground">Document cleaning activities with photo and video evidence</p>
+        <h1 className="text-2xl font-bold text-foreground">Cooking</h1>
+        <p className="text-muted-foreground">Document cooking activities with recipe details and media evidence</p>
       </div>
 
-      {/* Cleaning Type Tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {CLEANING_TYPES.map((type) => (
-          <button
-            key={type.key}
-            onClick={() => { setActiveType(type.key); resetForm(); }}
-            className={cn(
-              "rounded-xl p-4 text-left transition-all border",
-              activeType === type.key
-                ? "bg-primary text-primary-foreground border-primary shadow-md"
-                : "bg-card text-card-foreground border-border hover:border-primary/50"
-            )}
-          >
-            <span className="text-sm font-semibold">{type.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Form */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{activeConfig.label}</CardTitle>
-          <p className="text-sm text-muted-foreground">{activeConfig.description}</p>
+          <CardTitle className="text-lg">Log Cooking Activity</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Date Picker */}
           <div className="space-y-2">
-            <Label>Cleaning Date *</Label>
+            <Label>Cooking Date *</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={cn("w-full justify-start text-left font-normal", !cleanDate && "text-muted-foreground")}
+                  className={cn("w-full justify-start text-left font-normal", !cookDate && "text-muted-foreground")}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {cleanDate ? format(cleanDate, "PPP") : "Select date"}
+                  {cookDate ? format(cookDate, "PPP") : "Select date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  selected={cleanDate}
-                  onSelect={setCleanDate}
+                  selected={cookDate}
+                  onSelect={setCookDate}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
@@ -163,9 +160,26 @@ const CleaningPage: React.FC = () => {
             </Popover>
           </div>
 
+          {/* Recipe Type */}
+          <div className="space-y-2">
+            <Label>Recipe Type *</Label>
+            <Select value={recipeType} onValueChange={setRecipeType} disabled={isLoadingTypes}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={isLoadingTypes ? "Loading..." : "Select recipe type"} />
+              </SelectTrigger>
+              <SelectContent>
+                {recipeTypes.map((rt) => (
+                  <SelectItem key={rt.recipe_code} value={rt.recipe_type}>
+                    {rt.recipe_type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Photo Upload */}
           <div className="space-y-2">
-            <Label>Cleaning Photo *</Label>
+            <Label>Cooking Photo *</Label>
             <div
               onClick={() => photoRef.current?.click()}
               className={cn(
@@ -173,7 +187,7 @@ const CleaningPage: React.FC = () => {
                 photo ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
               )}
             >
-              <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+              <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, "photo", setPhoto)} />
               {photo ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
@@ -191,7 +205,7 @@ const CleaningPage: React.FC = () => {
 
           {/* Video Upload */}
           <div className="space-y-2">
-            <Label>Cleaning Video *</Label>
+            <Label>Cooking Video *</Label>
             <div
               onClick={() => videoRef.current?.click()}
               className={cn(
@@ -199,7 +213,7 @@ const CleaningPage: React.FC = () => {
                 video ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
               )}
             >
-              <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
+              <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={(e) => handleFileChange(e, "video", setVideo)} />
               {video ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
@@ -224,7 +238,7 @@ const CleaningPage: React.FC = () => {
             ) : (
               <>
                 <Upload className="w-4 h-4" />
-                Submit {activeConfig.label}
+                Submit Cooking Record
               </>
             )}
           </Button>
@@ -234,4 +248,4 @@ const CleaningPage: React.FC = () => {
   );
 };
 
-export default CleaningPage;
+export default CookingPage;
