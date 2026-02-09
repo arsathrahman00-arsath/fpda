@@ -14,6 +14,21 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+// API for fetching day requirement qty per item
+const dayReqQtyApi = {
+  getByDateAndItem: async (day_req_date: string, item_name: string) => {
+    const formData = new FormData();
+    formData.append("day_req_date", day_req_date);
+    formData.append("item_name", item_name);
+    const response = await fetch("https://ngrchatbot.whindia.in/fpda/day_req_qty_materiel/", {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  },
+};
+
 interface ItemData {
   item_name: string;
   cat_name: string;
@@ -24,7 +39,9 @@ interface ItemRow {
   id: string;
   item_name: string;
   unit_short: string;
+  day_req_qty: string;
   received_qty: string;
+  isLoadingDayReq: boolean;
 }
 
 interface SupplierGroup {
@@ -96,8 +113,40 @@ const MaterialReceiptPage: React.FC = () => {
         id: `${item.item_name}-${index}`,
         item_name: item.item_name,
         unit_short: standardizeUnit(item.unit_short),
+        day_req_qty: "",
         received_qty: "",
+        isLoadingDayReq: false,
       }));
+  };
+
+  // Fetch day_req_qty for items when category is selected and date is set
+  const fetchDayReqQtyForItems = async (groupId: number, items: ItemRow[]) => {
+    if (!selectedDate) return items;
+
+    const formattedDate = format(selectedDate, "yyyy-MM-dd");
+    
+    // Mark all items as loading
+    setSupplierGroups(prev => prev.map(group =>
+      group.id === groupId ? { ...group, items: group.items.map(item => ({ ...item, isLoadingDayReq: true })) } : group
+    ));
+
+    const updatedItems = await Promise.all(
+      items.map(async (item) => {
+        try {
+          const response = await dayReqQtyApi.getByDateAndItem(formattedDate, item.item_name);
+          if (response.status === "success" && response.data) {
+            return { ...item, day_req_qty: String(response.data.day_req_qty || "0"), isLoadingDayReq: false };
+          }
+        } catch (error) {
+          console.error(`Failed to fetch day_req_qty for ${item.item_name}:`, error);
+        }
+        return { ...item, day_req_qty: "0", isLoadingDayReq: false };
+      })
+    );
+
+    setSupplierGroups(prev => prev.map(group =>
+      group.id === groupId ? { ...group, items: updatedItems } : group
+    ));
   };
 
   const updateSupplierName = (groupId: number, value: string) => {
@@ -111,6 +160,10 @@ const MaterialReceiptPage: React.FC = () => {
     setSupplierGroups(prev => prev.map(group =>
       group.id === groupId ? { ...group, categoryName: value, items } : group
     ));
+    // Fetch day_req_qty for the items
+    if (selectedDate) {
+      fetchDayReqQtyForItems(groupId, items);
+    }
   };
 
   const updateReceivedQty = (groupId: number, itemId: string, value: string) => {
@@ -186,7 +239,6 @@ const MaterialReceiptPage: React.FC = () => {
       );
 
       toast({ title: "Success", description: `${validEntries.length} material receipt(s) saved successfully` });
-
       setSelectedDate(undefined);
       setSupplierGroups([{ id: 1, supplierName: "", categoryName: "", items: [] }]);
     } catch (error) {
@@ -227,10 +279,7 @@ const MaterialReceiptPage: React.FC = () => {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "w-[200px] justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
+                    className={cn("w-[200px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {selectedDate ? format(selectedDate, "PPP") : "Select date"}
@@ -316,6 +365,7 @@ const MaterialReceiptPage: React.FC = () => {
                         <TableRow className="bg-muted/30">
                           <TableHead>Item Name</TableHead>
                           <TableHead className="w-32">Unit of Measure</TableHead>
+                          <TableHead className="w-36">Allocated Qty</TableHead>
                           <TableHead className="w-40">Received Quantity</TableHead>
                           <TableHead className="w-20">Action</TableHead>
                         </TableRow>
@@ -325,6 +375,13 @@ const MaterialReceiptPage: React.FC = () => {
                           <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.item_name}</TableCell>
                             <TableCell>{item.unit_short}</TableCell>
+                            <TableCell>
+                              {item.isLoadingDayReq ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <span className="font-medium text-primary">{item.day_req_qty || "—"}</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <Input
                                 type="number"
