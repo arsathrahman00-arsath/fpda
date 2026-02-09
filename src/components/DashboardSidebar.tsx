@@ -22,6 +22,7 @@ import {
   PackageCheck,
   Utensils,
   Send,
+  SprayCan,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -253,6 +254,13 @@ const DashboardSidebar: React.FC = () => {
           to="/dashboard/packing" 
           icon={<PackageCheck className="w-5 h-5" />} 
           label="Packing" 
+        />
+        
+        {/* Cleaning - Separate Menu */}
+        <NavItem 
+          to="/dashboard/cleaning" 
+          icon={<SprayCan className="w-5 h-5" />} 
+          label="Cleaning" 
         />
         
         {/* Distribution Menu with Submenu */}

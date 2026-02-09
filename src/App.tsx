@@ -22,6 +22,7 @@ import MaterialReceiptPage from "@/pages/MaterialReceiptPage";
 import PackingPage from "@/pages/PackingPage";
 import FoodAllocationPage from "@/pages/FoodAllocationPage";
 import DeliveryPage from "@/pages/DeliveryPage";
+import CleaningPage from "@/pages/CleaningPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
                 <Route path="/dashboard/packing" element={<PackingPage />} />
                 <Route path="/dashboard/food-allocation" element={<FoodAllocationPage />} />
                 <Route path="/dashboard/delivery" element={<DeliveryPage />} />
+                <Route path="/dashboard/cleaning" element={<CleaningPage />} />
               </Route>
             </Route>
 
