@@ -247,14 +247,21 @@ const entrySchema = z.object({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="z-50 bg-popover">
-                          {masjidList.map((masjid) => (
-                            <SelectItem
-                              key={masjid.masjid_name}
-                              value={masjid.masjid_name}
-                            >
-                              {masjid.masjid_name}
-                            </SelectItem>
-                          ))}
+                          {masjidList
+                            .filter(masjid => {
+                              const usedNames = fields
+                                .map((_, i) => form.getValues(`entries.${i}.masjid_name`))
+                                .filter((name, i) => i !== index && name);
+                              return !usedNames.includes(masjid.masjid_name) || masjid.masjid_name === field.value;
+                            })
+                            .map((masjid) => (
+                              <SelectItem
+                                key={masjid.masjid_name}
+                                value={masjid.masjid_name}
+                              >
+                                {masjid.masjid_name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

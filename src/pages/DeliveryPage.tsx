@@ -24,6 +24,7 @@ interface DeliveryRecord {
 interface MasjidInfo {
   masjid_name: string;
   req_qty: number;
+  alloc_qty: number;
 }
 
 const DeliveryPage: React.FC = () => {
@@ -40,6 +41,7 @@ const DeliveryPage: React.FC = () => {
 
   const [masjidList, setMasjidList] = useState<MasjidInfo[]>([]);
   const [selectedMasjid, setSelectedMasjid] = useState<string>("");
+  const [allocatedQty, setAllocatedQty] = useState<number>(0);
   const [deliveryTime, setDeliveryTime] = useState<string>("");
   const [deliveryBy, setDeliveryBy] = useState<string>("");
   const [deliveryQty, setDeliveryQty] = useState<string>("");
@@ -76,11 +78,11 @@ const DeliveryPage: React.FC = () => {
 
         if (response.status === "success" && response.data) {
           const data = response.data;
-          // requirements is an array of {masjid_name, req_qty}
           const requirements = data.requirements || [];
           const list: MasjidInfo[] = requirements.map((r: any) => ({
             masjid_name: r.masjid_name,
             req_qty: Number(r.req_qty) || 0,
+            alloc_qty: Number(r.alloc_qty) || 0,
           }));
           setMasjidList(list);
         } else {
@@ -99,19 +101,23 @@ const DeliveryPage: React.FC = () => {
 
   const resetFormFields = () => {
     setSelectedMasjid("");
+    setAllocatedQty(0);
     setDeliveryTime("");
     setDeliveryBy("");
     setDeliveryQty("");
   };
 
-  // Auto-populate delivery time when location is selected
+  // Auto-populate delivery time and allocated qty when location is selected
   useEffect(() => {
     if (selectedMasjid) {
       setDeliveryTime(format(new Date(), "HH:mm:ss"));
+      const found = masjidList.find(m => m.masjid_name === selectedMasjid);
+      setAllocatedQty(found ? found.alloc_qty : 0);
     } else {
       setDeliveryTime("");
+      setAllocatedQty(0);
     }
-  }, [selectedMasjid]);
+  }, [selectedMasjid, masjidList]);
 
   const handleSubmit = async () => {
     if (!selectedDate || !selectedMasjid || !deliveryQty || !deliveryBy) {
@@ -174,7 +180,7 @@ const DeliveryPage: React.FC = () => {
                           {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[200]" align="start">
                         <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus className="p-3 pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
@@ -193,12 +199,18 @@ const DeliveryPage: React.FC = () => {
                         <label className="text-sm font-medium">Location (Masjid)</label>
                         <Select value={selectedMasjid} onValueChange={setSelectedMasjid}>
                           <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="z-[200] bg-popover">
                             {masjidList.map((m, i) => (
                               <SelectItem key={i} value={m.masjid_name}>{m.masjid_name} (Req: {m.req_qty})</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+
+                      {/* Allocated Qty (auto-populated) */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Allocated Quantity</label>
+                        <Input value={allocatedQty || "—"} readOnly className="bg-muted font-semibold" />
                       </div>
 
                       {/* Delivery Time (auto-populated) */}
