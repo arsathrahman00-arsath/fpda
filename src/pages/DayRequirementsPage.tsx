@@ -324,30 +324,30 @@ const DayRequirementsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card className="shadow-warm border-0">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-warm flex items-center justify-center">
-                <ClipboardList className="w-5 h-5 text-primary-foreground" />
+        <CardHeader className="pb-3 px-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-9 h-9 shrink-0 rounded-lg bg-gradient-warm flex items-center justify-center">
+                <ClipboardList className="w-4 h-4 text-primary-foreground" />
               </div>
-              <div>
-                <CardTitle className="text-xl">Day Requirements</CardTitle>
-                <CardDescription>Plan daily ingredient requirements based on recipes</CardDescription>
+              <div className="min-w-0">
+                <CardTitle className="text-lg truncate">Day Requirements</CardTitle>
+                <CardDescription className="text-xs hidden sm:block">Plan daily ingredient requirements</CardDescription>
               </div>
             </div>
             <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetDialog(); }}>
               <DialogTrigger asChild>
-                <Button className="gap-2"><Plus className="w-4 h-4" /> Add Day Requirement</Button>
+                <Button size="sm" className="gap-1.5 shrink-0 h-9 touch-target"><Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Day Requirement</span><span className="sm:hidden">Add</span></Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Add Day Requirement</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {/* Selection Controls */}
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Select Date</label>
                       <Popover>

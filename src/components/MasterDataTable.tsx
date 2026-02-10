@@ -83,34 +83,34 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-9 h-9 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
             {icon}
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">{title}</h1>
-            <p className="text-sm text-muted-foreground">{description}</p>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-foreground truncate">{title}</h1>
+            <p className="text-xs text-muted-foreground hidden sm:block">{description}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={loadData}
             disabled={isLoading}
-            className="gap-2"
+            className="h-9 w-9"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
           </Button>
           <Button
             size="sm"
             onClick={() => setIsModalOpen(true)}
-            className="bg-gradient-warm hover:opacity-90 gap-2"
+            className="bg-gradient-warm hover:opacity-90 gap-1.5 h-9 touch-target"
           >
             <Plus className="w-4 h-4" />
-            Add New
+            <span className="hidden sm:inline">Add New</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>
@@ -177,7 +177,7 @@ const MasterDataTable: React.FC<MasterDataTableProps> = ({
       </Card>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {icon}
