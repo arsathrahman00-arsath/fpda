@@ -1,0 +1,9 @@
+{
+  "appId": "app.lovable.0b8a1d59f92144bca72f2a865157fd1d",
+  "appName": "FPDA",
+  "webDir": "dist",
+  "server": {
+    "url": "https://0b8a1d59-f921-44bc-a72f-2a865157fd1d.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  }
+}
