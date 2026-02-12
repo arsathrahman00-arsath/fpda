@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { CalendarIcon, Camera, Video, Upload, Loader2, CheckCircle2 } from "lucide-react";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useCameraCapture } from "@/hooks/use-camera-capture";
 import { cookingApi, recipeTypeListApi } from "@/lib/api";
 
 interface RecipeTypeOption {
@@ -20,6 +21,7 @@ interface RecipeTypeOption {
 const CookingPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { capturePhoto, captureVideo } = useCameraCapture();
   const [cookDate, setCookDate] = useState<Date>();
   const [recipeType, setRecipeType] = useState("");
   const [recipeTypes, setRecipeTypes] = useState<RecipeTypeOption[]>([]);
@@ -27,8 +29,6 @@ const CookingPage: React.FC = () => {
   const [video, setVideo] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingTypes, setIsLoadingTypes] = useState(true);
-  const photoRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchRecipeTypes = async () => {
@@ -46,29 +46,14 @@ const CookingPage: React.FC = () => {
     fetchRecipeTypes();
   }, []);
 
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: "photo" | "video",
-    setter: (f: File | null) => void,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const isPhoto = type === "photo";
-    const prefix = isPhoto ? "image/" : "video/";
-    const maxMB = isPhoto ? 10 : 50;
-    if (!file.type.startsWith(prefix)) {
-      toast({ title: "Invalid file", description: `Please select a ${type} file.`, variant: "destructive" });
-      return;
-    }
-    if (file.size > maxMB * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: `${type === "photo" ? "Image" : "Video"} must be under ${maxMB}MB.`,
-        variant: "destructive",
-      });
-      return;
-    }
-    setter(file);
+  const handleCapturePhoto = async () => {
+    const file = await capturePhoto();
+    if (file) setPhoto(file);
+  };
+
+  const handleCaptureVideo = async () => {
+    const file = await captureVideo();
+    if (file) setVideo(file);
   };
 
   const resetForm = () => {
@@ -76,8 +61,6 @@ const CookingPage: React.FC = () => {
     setRecipeType("");
     setPhoto(null);
     setVideo(null);
-    if (photoRef.current) photoRef.current.value = "";
-    if (videoRef.current) videoRef.current.value = "";
   };
 
   const handleSubmit = async () => {
@@ -90,11 +73,11 @@ const CookingPage: React.FC = () => {
       return;
     }
     if (!photo) {
-      toast({ title: "Missing photo", description: "Please upload a cooking photo.", variant: "destructive" });
+      toast({ title: "Missing photo", description: "Please capture a cooking photo.", variant: "destructive" });
       return;
     }
     if (!video) {
-      toast({ title: "Missing video", description: "Please upload a cooking video.", variant: "destructive" });
+      toast({ title: "Missing video", description: "Please record a cooking video.", variant: "destructive" });
       return;
     }
 
@@ -111,11 +94,7 @@ const CookingPage: React.FC = () => {
       toast({ title: "Success", description: "Cooking record submitted successfully." });
       resetForm();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit cooking record. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to submit cooking record. Please try again.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -147,13 +126,7 @@ const CookingPage: React.FC = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={cookDate}
-                  onSelect={setCookDate}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
+                <Calendar mode="single" selected={cookDate} onSelect={setCookDate} initialFocus className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
           </div>
@@ -167,32 +140,22 @@ const CookingPage: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 {recipeTypes.map((rt) => (
-                  <SelectItem key={rt.recipe_code} value={rt.recipe_type}>
-                    {rt.recipe_type}
-                  </SelectItem>
+                  <SelectItem key={rt.recipe_code} value={rt.recipe_type}>{rt.recipe_type}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Photo Upload */}
+          {/* Photo Capture */}
           <div className="space-y-2">
             <Label>Cooking Photo *</Label>
             <div
-              onClick={() => photoRef.current?.click()}
+              onClick={handleCapturePhoto}
               className={cn(
                 "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors",
-                photo ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30",
+                photo ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
               )}
             >
-              <input
-                ref={photoRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => handleFileChange(e, "photo", setPhoto)}
-              />
               {photo ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
@@ -201,31 +164,23 @@ const CookingPage: React.FC = () => {
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Camera className="w-8 h-8" />
-                  <span className="text-sm">Tap to capture photo</span>
-                  <span className="text-xs">Opens camera (max 10MB)</span>
+                  <span className="text-sm">Tap to open camera</span>
+                  <span className="text-xs">Capture photo directly (max 10MB)</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Video Upload */}
+          {/* Video Capture */}
           <div className="space-y-2">
             <Label>Cooking Video *</Label>
             <div
-              onClick={() => videoRef.current?.click()}
+              onClick={handleCaptureVideo}
               className={cn(
                 "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors",
-                video ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30",
+                video ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
               )}
             >
-              <input
-                ref={videoRef}
-                type="file"
-                accept="video/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => handleFileChange(e, "video", setVideo)}
-              />
               {video ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
@@ -243,15 +198,9 @@ const CookingPage: React.FC = () => {
 
           <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
             {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Submitting...
-              </>
+              <><Loader2 className="w-4 h-4 animate-spin" />Submitting...</>
             ) : (
-              <>
-                <Upload className="w-4 h-4" />
-                Submit Cooking Record
-              </>
+              <><Upload className="w-4 h-4" />Submit Cooking Record</>
             )}
           </Button>
         </CardContent>
