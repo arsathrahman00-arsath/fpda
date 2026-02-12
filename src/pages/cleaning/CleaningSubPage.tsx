@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { CalendarIcon, Camera, Video, Upload, Loader2, CheckCircle2 } from "lucide-react";
@@ -7,12 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
+import { useCameraCapture } from "@/hooks/use-camera-capture";
 import { cleaningApi, CleaningType } from "@/lib/api";
 
 interface CleaningSubPageProps {
@@ -24,40 +21,26 @@ interface CleaningSubPageProps {
 const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, description }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { capturePhoto, captureVideo } = useCameraCapture();
   const [cleanDate, setCleanDate] = useState<Date>();
   const [photo, setPhoto] = useState<File | null>(null);
   const [video, setVideo] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const photoRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    fileType: "photo" | "video",
-    setter: (f: File | null) => void
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const isPhoto = fileType === "photo";
-    const prefix = isPhoto ? "image/" : "video/";
-    const maxMB = isPhoto ? 10 : 50;
-    if (!file.type.startsWith(prefix)) {
-      toast({ title: "Invalid file", description: `Please select a ${fileType} file.`, variant: "destructive" });
-      return;
-    }
-    if (file.size > maxMB * 1024 * 1024) {
-      toast({ title: "File too large", description: `${isPhoto ? "Image" : "Video"} must be under ${maxMB}MB.`, variant: "destructive" });
-      return;
-    }
-    setter(file);
+  const handleCapturePhoto = async () => {
+    const file = await capturePhoto();
+    if (file) setPhoto(file);
+  };
+
+  const handleCaptureVideo = async () => {
+    const file = await captureVideo();
+    if (file) setVideo(file);
   };
 
   const resetForm = () => {
     setCleanDate(undefined);
     setPhoto(null);
     setVideo(null);
-    if (photoRef.current) photoRef.current.value = "";
-    if (videoRef.current) videoRef.current.value = "";
   };
 
   const handleSubmit = async () => {
@@ -66,11 +49,11 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
       return;
     }
     if (!photo) {
-      toast({ title: "Missing photo", description: "Please upload a cleaning photo.", variant: "destructive" });
+      toast({ title: "Missing photo", description: "Please capture a cleaning photo.", variant: "destructive" });
       return;
     }
     if (!video) {
-      toast({ title: "Missing video", description: "Please upload a cleaning video.", variant: "destructive" });
+      toast({ title: "Missing video", description: "Please record a cleaning video.", variant: "destructive" });
       return;
     }
 
@@ -117,13 +100,7 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={cleanDate}
-                  onSelect={setCleanDate}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
+                <Calendar mode="single" selected={cleanDate} onSelect={setCleanDate} initialFocus className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
           </div>
@@ -131,13 +108,12 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
           <div className="space-y-2">
             <Label>Cleaning Photo *</Label>
             <div
-              onClick={() => photoRef.current?.click()}
+              onClick={handleCapturePhoto}
               className={cn(
                 "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors",
                 photo ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
               )}
             >
-              <input ref={photoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFileChange(e, "photo", setPhoto)} />
               {photo ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
@@ -146,8 +122,8 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Camera className="w-8 h-8" />
-                  <span className="text-sm">Tap to capture photo</span>
-                  <span className="text-xs">Opens camera (max 10MB)</span>
+                  <span className="text-sm">Tap to open camera</span>
+                  <span className="text-xs">Capture photo directly (max 10MB)</span>
                 </div>
               )}
             </div>
@@ -156,13 +132,12 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
           <div className="space-y-2">
             <Label>Cleaning Video *</Label>
             <div
-              onClick={() => videoRef.current?.click()}
+              onClick={handleCaptureVideo}
               className={cn(
                 "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors",
                 video ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
               )}
             >
-              <input ref={videoRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={(e) => handleFileChange(e, "video", setVideo)} />
               {video ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
@@ -180,15 +155,9 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
 
           <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
             {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Submitting...
-              </>
+              <><Loader2 className="w-4 h-4 animate-spin" />Submitting...</>
             ) : (
-              <>
-                <Upload className="w-4 h-4" />
-                Submit {title}
-              </>
+              <><Upload className="w-4 h-4" />Submit {title}</>
             )}
           </Button>
         </CardContent>
