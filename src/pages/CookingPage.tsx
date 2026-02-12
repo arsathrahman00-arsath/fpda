@@ -201,7 +201,7 @@ const CookingPage: React.FC = () => {
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Camera className="w-8 h-8" />
-                  <span className="text-sm">sssssTap to capture photo</span>
+                  <span className="text-sm">Tap to capture photo</span>
                   <span className="text-xs">Opens camera (max 10MB)</span>
                 </div>
               )}
