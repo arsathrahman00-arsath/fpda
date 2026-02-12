@@ -7,18 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { cookingApi, recipeTypeListApi } from "@/lib/api";
 
@@ -59,7 +49,7 @@ const CookingPage: React.FC = () => {
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     type: "photo" | "video",
-    setter: (f: File | null) => void
+    setter: (f: File | null) => void,
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -71,7 +61,11 @@ const CookingPage: React.FC = () => {
       return;
     }
     if (file.size > maxMB * 1024 * 1024) {
-      toast({ title: "File too large", description: `${type === "photo" ? "Image" : "Video"} must be under ${maxMB}MB.`, variant: "destructive" });
+      toast({
+        title: "File too large",
+        description: `${type === "photo" ? "Image" : "Video"} must be under ${maxMB}MB.`,
+        variant: "destructive",
+      });
       return;
     }
     setter(file);
@@ -117,7 +111,11 @@ const CookingPage: React.FC = () => {
       toast({ title: "Success", description: "Cooking record submitted successfully." });
       resetForm();
     } catch (error) {
-      toast({ title: "Error", description: "Failed to submit cooking record. Please try again.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to submit cooking record. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -184,10 +182,17 @@ const CookingPage: React.FC = () => {
               onClick={() => photoRef.current?.click()}
               className={cn(
                 "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors",
-                photo ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
+                photo ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30",
               )}
             >
-              <input ref={photoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFileChange(e, "photo", setPhoto)} />
+              <input
+                ref={photoRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => handleFileChange(e, "photo", setPhoto)}
+              />
               {photo ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
@@ -196,7 +201,7 @@ const CookingPage: React.FC = () => {
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Camera className="w-8 h-8" />
-                  <span className="text-sm">Tap to capture photo</span>
+                  <span className="text-sm">sssssTap to capture photo</span>
                   <span className="text-xs">Opens camera (max 10MB)</span>
                 </div>
               )}
@@ -210,10 +215,17 @@ const CookingPage: React.FC = () => {
               onClick={() => videoRef.current?.click()}
               className={cn(
                 "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors",
-                video ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
+                video ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30",
               )}
             >
-              <input ref={videoRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={(e) => handleFileChange(e, "video", setVideo)} />
+              <input
+                ref={videoRef}
+                type="file"
+                accept="video/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => handleFileChange(e, "video", setVideo)}
+              />
               {video ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
