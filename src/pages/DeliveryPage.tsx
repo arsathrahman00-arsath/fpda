@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Plus, Save, Truck } from "lucide-react";
+import { CalendarIcon, Loader2, Plus, Save, Truck, ScanLine } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { deliveryApi } from "@/lib/api";
+import QrScanner from "@/components/QrScanner";
 
 interface DeliveryRecord {
   location: string;
@@ -45,6 +46,19 @@ const DeliveryPage: React.FC = () => {
   const [deliveryTime, setDeliveryTime] = useState<string>("");
   const [deliveryBy, setDeliveryBy] = useState<string>("");
   const [deliveryQty, setDeliveryQty] = useState<string>("");
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
+
+  const handleQrScan = useCallback((result: string) => {
+    const match = masjidList.find(
+      (m) => m.masjid_name.toLowerCase() === result.trim().toLowerCase()
+    );
+    if (match) {
+      setSelectedMasjid(match.masjid_name);
+      toast({ title: "QR Scanned", description: `Location set to ${match.masjid_name}` });
+    } else {
+      toast({ title: "QR Scanned", description: `Scanned: "${result}". No matching location found.`, variant: "destructive" });
+    }
+  }, [masjidList, toast]);
 
   const fetchRecords = async () => {
     setIsLoadingRecords(true);
@@ -194,17 +208,29 @@ const DeliveryPage: React.FC = () => {
 
                   {!isLoadingDateData && selectedDate && masjidList.length > 0 && (
                     <>
-                      {/* Location Selection */}
+                      {/* Location Selection with QR Scan */}
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Location (Masjid)</label>
-                        <Select value={selectedMasjid} onValueChange={setSelectedMasjid}>
-                          <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
-                          <SelectContent className="z-[200] bg-popover">
-                            {masjidList.map((m, i) => (
-                              <SelectItem key={i} value={m.masjid_name}>{m.masjid_name} (Req: {m.req_qty})</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                          <Select value={selectedMasjid} onValueChange={setSelectedMasjid}>
+                            <SelectTrigger className="flex-1"><SelectValue placeholder="Select location" /></SelectTrigger>
+                            <SelectContent className="z-[200] bg-popover">
+                              {masjidList.map((m, i) => (
+                                <SelectItem key={i} value={m.masjid_name}>{m.masjid_name} (Req: {m.req_qty})</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setQrScannerOpen(true)}
+                            className="shrink-0"
+                            title="Scan QR Code"
+                          >
+                            <ScanLine className="w-5 h-5" />
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Allocated Qty (auto-populated) */}
@@ -277,6 +303,7 @@ const DeliveryPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      <QrScanner open={qrScannerOpen} onClose={() => setQrScannerOpen(false)} onScan={handleQrScan} />
     </div>
   );
 };

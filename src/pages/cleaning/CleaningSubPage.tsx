@@ -137,7 +137,7 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
                 photo ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
               )}
             >
-              <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, "photo", setPhoto)} />
+              <input ref={photoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFileChange(e, "photo", setPhoto)} />
               {photo ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
@@ -146,8 +146,8 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Camera className="w-8 h-8" />
-                  <span className="text-sm">Click to upload photo</span>
-                  <span className="text-xs">JPG, PNG, WebP (max 10MB)</span>
+                  <span className="text-sm">Tap to capture photo</span>
+                  <span className="text-xs">Opens camera (max 10MB)</span>
                 </div>
               )}
             </div>
@@ -162,7 +162,7 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
                 video ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30"
               )}
             >
-              <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={(e) => handleFileChange(e, "video", setVideo)} />
+              <input ref={videoRef} type="file" accept="video/*" capture="environment" className="hidden" onChange={(e) => handleFileChange(e, "video", setVideo)} />
               {video ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <CheckCircle2 className="w-5 h-5" />
@@ -171,8 +171,8 @@ const CleaningSubPage: React.FC<CleaningSubPageProps> = ({ type, title, descript
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Video className="w-8 h-8" />
-                  <span className="text-sm">Click to upload video</span>
-                  <span className="text-xs">MP4, MOV, WebM (max 50MB)</span>
+                  <span className="text-sm">Tap to record video</span>
+                  <span className="text-xs">Opens camera (max 50MB)</span>
                 </div>
               )}
             </div>
